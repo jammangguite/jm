@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Production Enterprise Form Studio</title>
+  
+  <!-- Encrypted Offline PDF Engine dependencies loaded securely via CDN -->
+  <script src="https://cloudflare.com"></script>
+  <script src="https://cloudflare.com"></script>
+
+  <style>
+    :root {
+      --border: #1f2937;
+      --bg: #ffffff;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --input-border: #9ca3af;
+    }
+    * { box-sizing: border-box; }
+    
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: #111827;
+      background: #f3f4f6;
+      line-height: 1.4;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Password Authentication Screen */
+    #lockScreen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #111827;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #fff;
+    }
+    .lock-box {
+      background: #1e293b;
+      padding: 28px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    /* Sticky Dashboard Control Header Bar */
+    .controls {
+      max-width: 900px;
+      margin: 0 auto 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #f3f4f6;
+      padding: 8px 0;
+    }
+
+    /* Mobile Fluid Action Buttons (Min 44px Interaction Boundaries) */
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: #111827;
+      padding: 12px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn.success { background: var(--success); color: #fff; border-color: var(--success); }
+    .btn.danger { background: #fee2e2; color: var(--danger); border-color: #fca5a5; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Floating Status Notifications */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #111827;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .sheet {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,.05);
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    .header-row {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .header-text { flex: 1; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    p.note { margin: 0; color: var(--muted); font-size: 13px; }
+
+    /* Passport Image Processor Node */
+    .photo-container {
+      align-self: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .photo-box {
+      width: 120px;
+      height: 140px;
+      border: 2px dashed var(--input-border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      background: #f9fafb;
+    }
+    .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-placeholder { font-size: 12px; color: var(--muted); text-align: center; padding: 8px; pointer-events: none; }
+    .photo-input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    .cancel-photo-btn { font-size: 11px; padding: 4px 8px; min-height: auto; height: 28px; border-radius: 4px; }
+    .error-msg { color: var(--danger); font-size: 12px; margin-top: 4px; display: none; font-weight: 500; }
+
+    /* Core Input Layout Grid */
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    .field, .full { display: flex; flex-direction: column; gap: 6px; }
+    label { font-weight: 700; font-size: 14px; }
+    
+    /* Input UI Layers (16px Restricts iOS Screen Zoom Errors) */
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 16px;
+      background: #fff;
+      appearance: none;
+      -webkit-appearance: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    select {
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://w3.org' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+    }
+    textarea { min-height: 100px; resize: none; }
+
+    /* High-Resolution HTML5 Vector Drawing Pad Layout */
+    .signature-section {
+      margin-top: 32px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .canvas-container { display: flex; flex-direction: column; gap: 8px; }
+    canvas {
+      border: 1px dashed var(--input-border);
+      background: #f9fafb;
+      border-radius: 8px;
+      width: 100%;
+      height: 150px;
+      touch-action: none;
+    }
+    .canvas-actions { display: flex; gap: 8px; }
+    .canvas-btn { min-height: 32px; height: 36px; padding: 4px 12px; font-size: 11px; }
+    .line { margin-top: 12px; border-top: 1px solid #111827; font-size: 12px; color: var(--muted); padding-top: 6px; }
+
+    @media (min-width: 600px) {
+      body { padding: 24px; }
+      .sheet { padding: 32px; }
+      .header-row { flex-direction: row; align-items: flex-start; }
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      .full { grid-column: 1 / -1; }
+      .signature-section { grid-template-columns: 2fr 1fr; }
+      .photo-container { align-self: flex-start; }
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .controls, .photo-input, .cancel-photo-btn, .toast, .error-msg, #lockScreen, .canvas-actions { display: none !important; }
+      .sheet { border: 0; box-shadow: none; margin: 0; max-width: none; width: 100%; padding: 0; }
+      .photo-box, canvas { border-style: solid; }
+      canvas { background: transparent; }
+      input, select, textarea { border: 1px solid #6b7280; font-size: 14px; padding: 8px; background: transparent; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      @page { size: A4; margin: 15mm; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Entry Authentication Interface Node -->
+  <div id="lockScreen">
+    <div class="lock-box">
+      <h3 style="margin-top:0;">Secure Document Gateway</h3>
+      <p style="font-size:13px; color:var(--input-border); margin-bottom:16px;">Authentication required to modify system fields.</p>
+      <input type="password" id="gatePass" placeholder="Enter Access Password" style="margin-bottom:12px; text-align:center;">
+      <button type="button" class="btn primary" style="width:100%;" onclick="checkGatePassword()">Unlock Console</button>
+      <div id="gateError" style="color:var(--danger); font-size:12px; margin-top:8px; display:none; font-weight:bold;">Invalid Password.</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button type="button" class="btn primary" onclick="handlePrint()">Print view</button>
+    <button type="button" class="btn success" id="securePdfBtn" onclick="exportEncryptedPDF()">Secure PDF</button>
+    <button type="button" class="btn" id="webhookBtn" onclick="dispatchWebhookPayload()">Email Sync</button>
+    <button type="button" class="btn danger" onclick="handleReset()">Reset Data</button>
+  </div>
+
+  <div id="toast" class="toast">Progress saved offline</div>
+
+  <form id="form" class="sheet" onsubmit="event.preventDefault();">
+    <div class="header-row">
+      <div class="header-text">
+        <h1>General Information Form</h1>
+        <p class="note">Local sandboxing protects data states automatically. Run exports via the control matrix.</p>
+      </div>
+      
+      <div class="photo-container">
+        <div class="photo-box" id="photoBox">
+          <div class="photo-placeholder" id="placeholderText">Tap to Upload Photo<br><span style="font-size:10px; color:var(--muted);">(Max 5MB)</span></div>
+          <img id="photoPreview" style="display: none;" alt="Preview" />
+          <input type="file" id="photoFile" class="photo-input" accept="image/*" onchange="previewImage(this)" />
+        </div>
+        <div id="photoError" class="error-msg">Image must be under 5MB.</div>
+        <button type="button" id="cancelPhoto" class="btn danger cancel-photo-btn" style="display: none;" onclick="clearPhoto()">Cancel Photo</button>
+      </div>
+    </div>
+
+    <div class="grid">
